@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>郭熙《早春圖》數位巡禮大富翁</title>
+    <style>
+        :root { --main-bg: #f4f1de; --border-color: #5d503d; }
+        body { font-family: "Microsoft JhengHei", serif; background-color: var(--main-bg); display: flex; flex-direction: column; align-items: center; margin: 0; }
+        #game-container { position: relative; width: 650px; height: 650px; margin-top: 20px; border: 5px solid var(--border-color); background: #fff; }
+        
+        /* 中央主圖 */
+        #center-art {
+            position: absolute; top: 100px; left: 100px; width: 450px; height: 450px;
+            background: url('https://digitalarchive.npm.gov.tw/Collection/Detail/47?dep=P') center/contain no-repeat;
+            display: flex; align-items: center; justify-content: center; border: 2px inset #ccc;
+        }
+        #center-art::after { content: "早春圖 (1072)"; color: #888; font-size: 0.8em; position: absolute; bottom: 5px; }
+
+        /* 格子樣式 */
+        .cell {
+            position: absolute; width: 98px; height: 98px; border: 1px solid var(--border-color);
+            background-color: #faf9f2; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; font-size: 13px; text-align: center; padding: 5px; box-sizing: border-box;
+        }
+        .player { width: 30px; height: 30px; background: #d62828; border-radius: 50%; position: absolute; z-index: 10; transition: all 0.4s; box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 2px solid #fff; }
+
+        /* UI 元件 */
+        #controls { margin-top: 20px; text-align: center; }
+        button { padding: 10px 20px; font-size: 1.2em; cursor: pointer; background: #5d503d; color: white; border: none; border-radius: 5px; }
+        #status { margin-top: 10px; font-weight: bold; color: #3d405b; }
+    </style>
+</head>
+<body>
+
+    <h2>郭熙《早春圖》數位大富翁</h2>
+    <div id="status">剩餘步數: 30 | 目前位置: 起點</div>
+
+    <div id="game-container">
+        <div id="center-art"></div>
+        <div id="player" class="player"></div>
+        </div>
+
+    <div id="controls">
+        <button onclick="rollDice()">投擲骰子</button>
+        <p>收集「雲頭皴」、「蟹爪枝」等元素，在 5 分鐘內完成名畫巡禮！</p>
+    </div>
+
+    <script>
+        const cellsData = [
+            { name: "起點", info: "進入 1072 年的早春世界 [cite: 1, 2]" },
+            { name: "雲頭皴", info: "描繪山石輪廓，狀如捲曲雲塊 [cite: 4, 5]" },
+            { name: "蟹爪枝", info: "樹木枝椏如伸指布掌，承襲李成特色 [cite: 4, 5]" },
+            { name: "溪澗", info: "泉水從谷間潺潺流下，象徵生機 " },
+            { name: "行旅人物", info: "細膩描繪舟樵活動，展現可遊意境 [cite: 2, 3]" },
+            { name: "林泉高致", info: "郭熙的山水理論，印證畫中意境 [cite: 3, 4]" },
+            { name: "巨松", info: "畫面下方的巨木，展現傲然生機 [cite: 2, 5]" },
+            { name: "煙嵐浮動", info: "暗示宇宙間無窮的生機 [cite: 1]" },
+            { name: "高遠法", info: "主峰居中，下臨深淵的視覺震撼 " },
+            { name: "平遠法", info: "左側平坡委迤，覺有千里之遙 [cite: 4, 5]" },
+            { name: "深遠法", info: "營造出空間的奇幻與層次 [cite: 3, 5]" },
+            { name: "瑞雪消融", info: "大地復甦，草木發枝的景象 [cite: 4, 5]" },
+            { name: "殿堂樓閣", info: "深山中宏偉的建築，可居的體現 [cite: 4, 5]" },
+            { name: "S形山體", info: "蜿蜒布列的岩塊，充滿能量動勢 [cite: 2, 5]" },
+            { name: "款書小字", info: "左側隸書：早春。壬子年郭熙畫 [cite: 1, 2]" },
+            { name: "墨色深淺", info: "營造光影效果與奇幻空間 [cite: 3]" }
+        ];
+
+        let currentPos = 0;
+        let stepsLeft = 30;
+        const container = document.getElementById('game-container');
+        const player = document.getElementById('player');
+
+        // 生成格子位置 (環繞 650x650 的邊緣)
+        function createBoard() {
+            const positions = [
+                {t: 550, l: 550}, {t: 550, l: 412}, {t: 550, l: 275}, {t: 550, l: 137}, // 底
+                {t: 550, l: 0},   {t: 412, l: 0},   {t: 275, l: 0},   {t: 137, l: 0},   // 左
+                {t: 0, l: 0},     {t: 0, l: 137},   {t: 0, l: 275},   {t: 0, l: 412},   // 頂
+                {t: 0, l: 550},   {t: 137, l: 550}, {t: 275, l: 550}, {t: 412, l: 550}  // 右
+            ];
+
+            cellsData.forEach((data, i) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.style.top = positions[i].t + 'px';
+                cell.style.left = positions[i].l + 'px';
+                cell.innerHTML = `<strong>${data.name}</strong>`;
+                container.appendChild(cell);
+            });
+            updatePlayerPos();
+        }
+
+        function updatePlayerPos() {
+            const cells = document.getElementsByClassName('cell');
+            const target = cells[currentPos];
+            player.style.top = (parseInt(target.style.top) + 35) + 'px';
+            player.style.left = (parseInt(target.style.left) + 35) + 'px';
+        }
+
+        function rollDice() {
+            if (stepsLeft <= 0) return alert("遊戲結束！感謝您欣賞郭熙的傑作。");
+            
+            const roll = Math.floor(Math.random() * 6) + 1;
+            currentPos = (currentPos + roll) % cellsData.length;
+            stepsLeft--;
+            
+            updatePlayerPos();
+            document.getElementById('status').innerText = 
+                `剩餘步數: ${stepsLeft} | 目前位置: ${cellsData[currentPos].name}`;
+            
+            setTimeout(() => {
+                alert(`${cellsData[currentPos].name}：\n${cellsData[currentPos].info}`);
+            }, 500);
+        }
+
+        createBoard();
+    </script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
